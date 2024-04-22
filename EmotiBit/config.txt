@@ -1,0 +1,8 @@
+{
+  "WifiCredentials": [
+    {
+      "ssid": "NOKIA-2720",
+      "password": "4ytLuMdk6r"
+    }
+  ]
+}
