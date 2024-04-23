@@ -1,11 +1,3 @@
-#include <OSCBoards.h>
-#include <OSCBundle.h>
-#include <OSCData.h>
-#include <OSCMatch.h>
-#include <OSCMessage.h>
-#include <OSCTiming.h>
-#include <SLIPEncodedSerial.h>
-
 /*
   You can use this sketch with the schematic with OLED display and Arduino Micro or Nano (see: https://github.com/pu2clr/SI4735/tree/master/extras/schematic).
   Also, this sketch works with the Chinese KIT ATS-20 and ATS-20+ sold on AliExpress, eBay and Amazon
@@ -139,7 +131,6 @@ const uint16_t cmd_0x15_size = sizeof cmd_0x15;          // Array of lines where
 
 #define STORE_TIME 10000  // Time of inactivity to make the current receiver status writable (10s / 10000 milliseconds).
 
-
 const uint8_t app_id = 32;  // Useful to check the EEPROM content before processing useful data
 const int eeprom_address = 0;
 long storeTime = millis();
@@ -160,9 +151,6 @@ bool cmdBw = false;        // if true, the encoder will control the bandwidth
 bool cmdBand = false;      // if true, the encoder will control the band
 bool cmdSoftMute = false;  // if true, the encoder will control the Soft Mute attenuation
 bool cmdAvc = false;       // if true, the encoder will control Automatic Volume Control
-
-bool seekingAuto = false;
-
 
 uint8_t muteVolume = 0;  // restore volume for "un-mute"
 
@@ -372,9 +360,6 @@ void setup() {
   useBand();
 
   currentFrequency = previousFrequency = si4735.getFrequency();
-
-  // Set OSC message
-  #define OSCMessage msg("/tina");
 
   si4735.setVolume(volume);
   oled.clear();
@@ -818,7 +803,6 @@ void showFrequency() {
     else
       convertToChar(currentFrequency, freqDisplay, 5, 2, '.');
   }
-  Serial.print(currentFrequency);
 
   oled.invertOutput(bfoOn);
   oled.setFont(FONT8X16ATARI);
@@ -838,7 +822,6 @@ void showFrequency() {
 */
 void showFrequencySeek(uint16_t freq) {
   currentFrequency = freq;
- 
   showFrequency();
 }
 
@@ -1161,7 +1144,6 @@ void loadSSB() {
    This function change to the band referenced by bandIdx (see table band).
 */
 void useBand() {
-
   cleanBfoRdsInfo();
   if (band[bandIdx].bandType == FM_BAND_TYPE) {
     currentMode = FM;
@@ -1378,6 +1360,18 @@ void disableCommand(bool *b, bool value, void (*showFunction)()) {
 }
 
 void loop() {
+if(Serial.Available >0){
+  char key = Serial.read();
+  if(key == '~'){
+    if(seekDirection == 0){
+      seekDirection = 1;
+    }else{
+      seekDirection = 0;
+    }
+  }
+
+}
+
 #if defined(DEBUG) && defined(DEBUG_BUTTONS_ONLY)
   btn_BandUp.checkEvent(buttonEvent);
   btn_BandDn.checkEvent(buttonEvent);
@@ -1431,37 +1425,6 @@ void loop() {
     elapsedRSSI = millis();
     countRSSI = 0;
   }
-  // added Skywave code: 
-  if (seekingAuto){
-   
-        if (currentMode == LSB || currentMode == USB) {
-      bfoOn = !bfoOn;
-      if (bfoOn)
-        showBFO();
-      showStatus();
-      disableCommand(NULL, false, NULL);  // disable all command buttons
-    } else if (currentMode == FM || currentMode == AM) {
-      // Jumps up or down one space
-      if (seekDirection)
-        si4735.frequencyUp();
-      else
-        si4735.frequencyDown();
-
-      si4735.seekStationProgress(showFrequencySeek, checkStopSeeking, seekDirection);
-      delay(30);
-      if (currentMode == FM) {
-        float f = round(si4735.getFrequency() / 10.0);
-        currentFrequency = (uint16_t)f * 10;  // adjusts band space from 1 (10kHz) to 10 (100 kHz)
-        si4735.setFrequency(currentFrequency);
-      } else {
-        currentFrequency = si4735.getFrequency();  //
-      }
-      msg.add(currentFrequency);
-      msg.send(Serial);
-      showFrequency();
-    }
-  }
-
 
   // Check button commands
   // check if some button is pressed
